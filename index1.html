@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hotel Menu — Main Menu with Sub Buttons</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#ffffff; --accent:#0b76ef; --muted:#6b7280;
+    --radius:12px; --shadow: 0 10px 30px rgba(15,15,15,0.06);
+    --maxW:980px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+    background:var(--bg); color:#0b1220; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    padding:20px; text-align:center; background:linear-gradient(180deg,#fff,#f4f7fb);
+    border-bottom:1px solid rgba(0,0,0,0.03);
+  }
+  header h1{margin:0;font-size:1.4rem}
+  header p{margin:6px 0 0;color:var(--muted);font-size:0.95rem}
+  .wrap{max-width:var(--maxW);margin:20px auto;padding:16px}
+  /* MAIN MENU BUTTON */
+  .main-actions{display:flex;justify-content:center;margin:18px 0}
+  .btn-main{
+    background:var(--accent); color:#fff; border:0;
+    padding:12px 18px; border-radius:999px; font-weight:700; font-size:1rem;
+    box-shadow:0 8px 22px rgba(11,118,239,0.14); cursor:pointer;
+  }
+  .btn-main:focus{outline:3px solid rgba(11,118,239,0.18)}
+  /* SUB BUTTONS PANEL */
+  .sub-panel{
+    margin-top:12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    transition:opacity .28s ease, transform .28s ease; opacity:0; transform:translateY(-6px); height:0; overflow:hidden;
+  }
+  .sub-panel.open{ opacity:1; transform:translateY(0); height:auto; }
+  .sub-btn{
+    background:#fff; border:1px solid rgba(11,118,239,0.08); color:var(--accent);
+    padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+    box-shadow:0 6px 18px rgba(11,118,239,0.04);
+  }
+  .sub-btn:focus{outline:3px solid rgba(11,118,239,0.12)}
+  /* CATEGORY PANEL (sliding content) */
+  .category-wrap{ max-width:900px; margin:22px auto; }
+  .category{
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    margin-bottom:14px; overflow:hidden; border:1px solid rgba(0,0,0,0.03);
+  }
+  /* We'll animate height manually via JS to allow smooth slideHeight */
+  .cat-inner{ padding:14px 16px; opacity:0; transform:translateY(6px); transition:opacity .24s ease, transform .24s ease }
+  .cat-inner.visible{ opacity:1; transform:translateY(0); }
+  .cat-header{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,0.04) }
+  .cat-title{ font-size:1.05rem; font-weight:700 }
+  .count{ color:var(--muted); font-size:0.95rem }
+  .items{ padding:8px 0 4px; }
+  .item{ display:flex; justify-content:space-between; gap:12px; padding:10px 8px; align-items:center; border-bottom:1px dashed rgba(0,0,0,0.04) }
+  .item:last-child{ border-bottom:0 }
+  .item .left{ max-width:72%; }
+  .name{ font-weight:600 }
+  .desc{ font-size:0.92rem; color:var(--muted); margin-top:6px }
+  .price{ font-weight:700; color:var(--accent); white-space:nowrap }
+  /* small action row */
+  .actions-row{ display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 16px }
+  .ghost{ background:transparent; border:1px solid rgba(0,0,0,0.06); padding:8px 10px; border-radius:8px; cursor:pointer }
+  /* responsive layout */
+  @media (min-width:700px){
+    .items .item{ padding:12px 8px }
+  }
+  footer{ text-align:center; color:var(--muted); margin-top:18px; font-size:0.9rem }
+  /* small helper */
+  .hint{ color:var(--muted); font-size:0.95rem; text-align:center; margin-top:6px }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Hotel Menu</h1>
+    <p>Tap <strong>Main Menu</strong> then choose a category. Works on mobile & tablet.</p>
+  </header>
+  <div class="wrap">
+    <!-- Main Menu button -->
+    <div class="main-actions">
+      <button id="mainBtn" class="btn-main" aria-expanded="false" aria-controls="subPanel">Main Menu</button>
+    </div>
+    <!-- Sub-buttons container -->
+    <div id="subPanel" class="sub-panel" aria-hidden="true">
+      <button class="sub-btn" data-cat="soups">Soups</button>
+      <button class="sub-btn" data-cat="starters">Starters</button>
+      <button class="sub-btn" data-cat="maincourse">Main Course</button>
+      <button class="sub-btn" data-cat="desserts">Desserts</button>
+    </div>
+    <!-- Category content will appear here -->
+    <div id="categoryContainer" class="category-wrap" aria-live="polite"></div>
+    <div class="hint">Tip: press <strong>Main Menu</strong> again to close the menu.</div>
+    <footer>© Hotel — Menu</footer>
+  </div>
+<script>
+/* ===== Data: edit items & prices here ===== */
+const MENU = {
+  soups: {
+    title: "Soups",
+    items: [
+      { name: "Tomato Soup", description: "Creamy tomato with basil", price: 120 },
+      { name: "Hot & Sour Soup", description: "Tangy + spicy vegetable soup", price: 140 },
+      { name: "Chicken Clear Soup", description: "Light broth with shredded chicken", price: 160 }
+    ]
+  },
+  starters: {
+    title: "Starters",
+    items: [
+      { name: "Paneer Tikka", description: "Char-grilled spiced cottage cheese", price: 220 },
+      { name: "Crispy Chicken Wings", description: "Spicy glazed wings", price: 260 },
+      { name: "Veg Spring Rolls", description: "Crunchy veg rolls with dip", price: 150 }
+    ]
+  },
+  maincourse: {
+    title: "Main Course",
+    items: [
+      { name: "Butter Chicken", description: "Rich tomato & butter gravy", price: 360 },
+      { name: "Veg Biryani", description: "Basmati rice with saffron & raita", price: 240 },
+      { name: "Paneer Butter Masala", description: "Creamy tomato curry", price: 300 }
+    ]
+  },
+  desserts: {
+    title: "Desserts",
+    items: [
+      { name: "Gulab Jamun", description: "Soft milk dumplings in syrup", price: 90 },
+      { name: "Chocolate Brownie", description: "Warm brownie with ice cream", price: 180 }
+    ]
+  }
+};
+/* ===== Helpers ===== */
+const mainBtn = document.getElementById('mainBtn');
+const subPanel = document.getElementById('subPanel');
+const subButtons = Array.from(document.querySelectorAll('.sub-btn'));
+const container = document.getElementById('categoryContainer');
+function formatPrice(p){ return p == null ? '-' : '₹' + Number(p).toFixed(0); }
+/* Smooth slide open/close using element height (better than CSS max-height trick) */
+function slideDown(el){
+  el.style.display = 'block';
+  const height = el.scrollHeight;
+  el.style.height = '0px';
+  el.style.overflow = 'hidden';
+  el.style.transition = 'height 300ms ease';
+  requestAnimationFrame(()=> {
+    el.style.height = height + 'px';
+  });
+  el.addEventListener('transitionend', function te(){
+    el.style.height = 'auto';
+    el.style.overflow = '';
+    el.style.transition = '';
+    el.removeEventListener('transitionend', te);
+  });
+}
+function slideUp(el){
+  const height = el.scrollHeight;
+  el.style.height = height + 'px';
+  requestAnimationFrame(()=> {
+    el.style.overflow = 'hidden';
+    el.style.transition = 'height 280ms ease';
+    el.style.height = '0px';
+  });
+  el.addEventListener('transitionend', function te(){
+    el.style.display = 'none';
+    el.style.height = '';
+    el.style.overflow = '';
+    el.style.transition = '';
+    el.removeEventListener('transitionend', te);
+    el.remove();
+  });
+}
+/* Toggle subPanel open/close */
+function toggleSubPanel(){
+  const open = subPanel.classList.contains('open');
+  if (open){
+    subPanel.classList.remove('open');
+    subPanel.setAttribute('aria-hidden', 'true');
+    mainBtn.setAttribute('aria-expanded', 'false');
+    if (currentPanel) {
+      const inner = currentPanel.querySelector('.cat-inner');
+      if (inner) inner.classList.remove('visible');
+      slideUp(currentPanel);
+      currentPanel = null;
+    }
+  } else {
+    subPanel.classList.add('open');
+    subPanel.setAttribute('aria-hidden', 'false');
+    mainBtn.setAttribute('aria-expanded', 'true');
+  }
+}
+/* Render category panel for chosen key (soups/starters/...) */
+let currentPanel = null;
+function showCategory(key){
+  const data = MENU[key];
+  if (!data) return;
+  // If same panel open -> close it
+  if (currentPanel && currentPanel.dataset.key === key){
+    slideUp(currentPanel);
+    currentPanel = null;
+    return;
+  }
+  // If another panel open -> close it first
+  if (currentPanel){
+    slideUp(currentPanel);
+    currentPanel = null;
+  }
+  // Create a new panel
+  const section = document.createElement('div');
+  section.className = 'category';
+  section.dataset.key = key;
+  // Header (title + count)
+  const header = document.createElement('div');
+  header.className = 'cat-header';
+  header.innerHTML = `<div class="cat-title">${escapeHtml(data.title)}</div><div class="count">${data.items.length} item${data.items.length!==1 ? 's' : ''}</div>`;
+  section.appendChild(header);
+  // Inner container that we will animate opacity for
+  const inner = document.createElement('div');
+  inner.className = 'cat-inner';
+  inner.setAttribute('aria-live','polite');
+  // Items list
+  const itemsWrap = document.createElement('div');
+  itemsWrap.className = 'items';
+  data.items.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.innerHTML = `<div class="left"><div class="name">${escapeHtml(it.name)}</div>${it.description ? `<div class="desc">${escapeHtml(it.description)}</div>` : ''}</div><div class="price">${formatPrice(it.price)}</div>`;
+    itemsWrap.appendChild(row);
+  });
+  // Actions row: back & close
+  const actions = document.createElement('div');
+  actions.className = 'actions-row';
+  actions.innerHTML = `<div><button class="ghost" data-action="back">Back</button></div><div><button class="ghost" data-action="close">Close</button></div>`;
+  inner.appendChild(itemsWrap);
+  inner.appendChild(actions);
+  section.appendChild(inner);
+  container.appendChild(section);
+  // Prepare animated reveal: set inner visible after slide
+  // set display none initially for section then slideDown
+  section.style.display = 'none';
+  // small delay then slide down
+  requestAnimationFrame(()=> {
+    slideDown(section);
+    // fade/translate in inner after short delay
+    setTimeout(()=> inner.classList.add('visible'), 120);
+  });
+  // button handlers inside actions
+  actions.addEventListener('click', (ev) => {
+    const a = ev.target.closest('button');
+    if (!a) return;
+    const action = a.dataset.action;
+    if (action === 'back'){
+      // remove the panel (slide up)
+      inner.classList.remove('visible');
+      slideUp(section);
+      currentPanel = null;
+    } else if (action === 'close'){
+      // close everything: hide panel and subpanel
+      inner.classList.remove('visible');
+      slideUp(section);
+      currentPanel = null;
+      // hide subpanel too
+      if (subPanel.classList.contains('open')) toggleSubPanel();
+    }
+  });
+  // Set as current
+  currentPanel = section;
+  // Scroll into view smoothly on small screens
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+/* Utility: escape HTML to avoid injection */
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* ===== Events ===== */
+mainBtn.addEventListener('click', toggleSubPanel);
+mainBtn.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleSubPanel(); }
+});
+subButtons.forEach(btn => {
+  btn.addEventListener('click', ()=> {
+    const cat = btn.dataset.cat;
+    showCategory(cat);
+  });
+  btn.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showCategory(btn.dataset.cat); }
+  });
+});
+/* Close category when user navigates away (optional): click outside */
+document.addEventListener('click', (ev) => {
+  const isClickInside = ev.target.closest('.category') || ev.target.closest('#subPanel') || ev.target.closest('#mainBtn');
+  if (!isClickInside){
+    if (currentPanel){
+      // close current
+      const sec = currentPanel;
+      const inner = sec.querySelector('.cat-inner');
+      if (inner) inner.classList.remove('visible');
+      slideUp(sec);
+      currentPanel = null;
+    }
+  }
+});
+/* Accessibility: close subPanel when pressing Escape */
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape'){
+    if (subPanel.classList.contains('open')) toggleSubPanel();
+    if (currentPanel){
+      const sec = currentPanel;
+      const inner = sec.querySelector('.cat-inner');
+      if (inner) inner.classList.remove('visible');
+      slideUp(sec);
+      currentPanel = null;
+    }
+  }
+});
+</script>
+</body>
+</html>
